@@ -101,7 +101,7 @@ var_array = [var_HT,var_MET,var_NJET,var_NBJET,var_SRi]
 
 plot(var_array,'ht>500e3')
 plot(var_array,'nbjet==4')
-
+tend = default_timer()
 print '   --> All happened in {:.2f}s\n'.format(tend-t0)
 
 
