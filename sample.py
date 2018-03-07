@@ -85,7 +85,7 @@ class sample:
         # this part should be tunable from outside the class - need to think how to do it properly
         #-----------------------------------------------------------
         weightBranches = ['weight_mc','weight_pileup','weight_leptonSF_tightLeps','weight_bTagSF_77','weight_jvt']
-        UsedBranches   = ['jet_pt','jet_mv2c20','lep_pt','ht','met_met']+weightBranches
+        UsedBranches   = ['jet_pt','jet_mv2c20','jet_mv2c10','lep_pt','ht','met_met']+weightBranches
         Usedselections =  'SSee_2015 || SSee_2016 || SSem_2015 || SSem_2016 || SSmm_2015 || SSmm_2016 ||'
         Usedselections += 'eee_2015  || eee_2016  || eem_2015  || eem_2016  || emm_2015  || emm_2016 || mmm_2015 || mmm_2016'
         UsedBranches   += Usedselections.replace(' ','').split('||')
