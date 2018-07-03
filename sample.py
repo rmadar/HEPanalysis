@@ -7,11 +7,15 @@ import numpy  as np
 import ROOT
 from   root_numpy import root2array
 
+# Disable warnings
+import warnings
+warnings.filterwarnings('ignore')
 
 ### TO DO ###
 # 1. add method to access the tree (process both with pandas and root)
 # 2. improve the string formating function
 # 3. improve the management of weights
+
 
 class sample:
     

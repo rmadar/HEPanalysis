@@ -1,16 +1,16 @@
 # Some utils function for HEP plotting
-
+import numpy             as np
 import pandas            as pd
 import matplotlib.pyplot as plt
 
 
 def compare_distributions(data_proc_array, variables, selection='', myfigsize=(20,20)):
-    """
+    '''
     Plot normalized distributions for two processes, for a given selection (9 variables max)
     variables: array of variable name (9 max)
     selection: string of event selection
     myfigsize: figure size in case of less than 9 variables
-    """
+    '''
     if (selection is not ''):
         for data,_ in data_proc_array:
             data = data.query(selection)
@@ -68,6 +68,7 @@ def plot_roc_curves(Xsig, Xbkg, variables, regressors, selections=''):
 
 def plot(sample_dict,v,sel='',mode='stack',lumi=80.0):
     '''
+    DocString to be filled
     '''
     
     if (sel): selected_data = {k:s.apply_selection(sel) for k,s in sample_dict.items()}

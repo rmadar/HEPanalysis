@@ -26,13 +26,13 @@ def computeZ0(bkg,sig,lumi,binning,var='ht',mode='complete'):
     if (mode=='simple'):
         err2 = b+berr2
         sig2 = s**2/(err2)
-        sig2[err2<=0]=0.0 # setting the significance to 0 for bins with no background or negative weights
-        
+                
     elif (mode=='complete'):
         term1 = (s+b)*np.log((s+b)*(b+berr2)/(b**2+(s+b)*berr2))
         term2 =  b**2/berr2*np.log(1+berr2*s/b/(b+berr2))
         sig2  = 2*(term1-term2)
         
     sig2[np.isnan(sig2)]=0.0
+    sig2[sig2<0]=0.0
     return np.sqrt(np.sum(sig2))
                                                         
