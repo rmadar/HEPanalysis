@@ -30,19 +30,12 @@ def flatten(column):
         return np.array([v for e in column for v in e])
     except (TypeError, ValueError):
         return column
-
     
 def match_shape(arr, ref):
     shape = [len(a) for a in ref]
     if len(arr) != np.sum(shape):
         raise ValueError('Incompatible shapes: len(arr) = {}, total elements in ref: {}'.format(len(arr), np.sum(shape)))
     return [arr[ptr:(ptr + nobj)].tolist() for (ptr, nobj) in zip(np.cumsum([0] + shape[:-1]), shape)]    
-
-
-
-
-
-
 
 def get_dataframe(listOfDISD, listOfBranch=['jet_pt','jet_mv2c20','lep_pt','ht','met_met']):
     """
@@ -54,13 +47,11 @@ def get_dataframe(listOfDISD, listOfBranch=['jet_pt','jet_mv2c20','lep_pt','ht',
     else:
         print('data file not found')
 
-
     weightBranches = ['weight_mc','weight_pileup','weight_leptonSF_tightLeps','weight_bTagSF_77','weight_jvt']
     UsedBranches   = listOfBranch+weightBranches
     Usedselections =  'SSee_2015 || SSee_2016 || SSem_2015 || SSem_2016 || SSmm_2015 || SSmm_2016 ||'
     Usedselections += 'eee_2015  || eee_2016  || eem_2015  || eem_2016  || emm_2015  || emm_2016 || mmm_2015 || mmm_2016'
-    UsedBranches   += Usedselections.replace(' ','').split('||')
-    
+    UsedBranches   += Usedselections.replace(' ','').split('||')    
     data = []
     for fname in filename_list:
 
@@ -73,7 +64,6 @@ def get_dataframe(listOfDISD, listOfBranch=['jet_pt','jet_mv2c20','lep_pt','ht',
         w_xsec   = 1.0/rootfile.Get('hIntLum').GetBinContent(1)
         thisdata['weight'] = w_xsec
         for wname in weightBranches: thisdata['weight'] *= thisdata[wname]
-
             
         # flat arrays for non e
         for var in thisdata.columns.tolist():
@@ -81,20 +71,15 @@ def get_dataframe(listOfDISD, listOfBranch=['jet_pt','jet_mv2c20','lep_pt','ht',
                 if ( type(thisdata[var][0]) is np.ndarray ):
                     flat_variable(thisdata, var)
             except IndexError: print 'IndexError, I am not sure why'
-
         data.append(thisdata)
-                
+        
     return pd.concat(data)
-
-
-
 
 def flat_variable(df, varname, Nelements=10):
     for i in range(0,Nelements):
         bname=varname+str(i)
         df[bname] = df[varname].apply(lambda c: get_value(c,i))
     return
-
 
 def get_value(x,i):
     try:
