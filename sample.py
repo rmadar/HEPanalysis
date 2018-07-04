@@ -15,18 +15,26 @@ warnings.filterwarnings('ignore')
 # 1. add method to access the tree (process both with pandas and root)
 # 2. improve the string formating function
 # 3. improve the management of weights
+# 4. improve the interface from outside with branches, selection and path
+#  4.a with an additional 'config' class storing all
+#  4.b simply with a dictionnary {''}
 
+class config:
+    def __init__(self,path,selection,branch,get_weight):
+        self.path=path
+        self.sel=selection
+        self.branches=branches
+        self.get_weight=get_weight
 
 class sample:
-    
     def __init__(self,dsid_array,name,latexname,color,weight,proctype,df=pd.DataFrame()):
         self.dsid_array  = dsid_array
         self.filelist    = self.get_files_list()
         self.name        = name
         self.latexname   = latexname
         self.color       = color
-        self.weight      = weight
-        self.proctype    = proctype
+        self.weight      = weight    # uselsess
+        self.proctype    = proctype  # useless
         self.tree        = 0
         self.df          = df
         if (self.df.empty):
