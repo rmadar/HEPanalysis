@@ -20,9 +20,9 @@ warnings.filterwarnings('ignore')
 
 
 class sample:
-    def __init__(self,config,dsid_array,name,latexname,color,weight,proctype,df=pd.DataFrame()):
+    def __init__(self,config,dsid_array,name,latexname,color,df=pd.DataFrame()):
         '''
-        config [dictionnary {property:info}] with property=[path,selection,branches,get_weight]
+        config [dictionnary {property:info}] with property=[path,selection,branches,weight]
         
         '''
         self.config      = config
@@ -31,8 +31,6 @@ class sample:
         self.name        = name
         self.latexname   = latexname
         self.color       = color
-        self.weight      = weight    # uselsess
-        self.proctype    = proctype  # useless
         self.tree        = 0
         self.df          = df
         if (self.df.empty):
@@ -43,7 +41,7 @@ class sample:
         return ('{:>'+str(10)+'}: {:>'+str(10)+'.0f} entries,'+(' '*5)+'color={}').format(self.name,self.Nentries,self.color)
 
     def __copy__(self,s):
-        return sample(s.dsid_array,s.name,s.latexname,s.color,s.weight,s.proctype,s.df)
+        return sample(s.config,s.dsid_array,s.name,s.latexname,s.color,s.df)
 
     def get_files_list(self):
         # To be tunable from outside

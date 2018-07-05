@@ -15,8 +15,9 @@ def computeZ0(bkg,sig,lumi,binning,var='ht',mode='complete'):
      - var [string]: name of the variable to extract the significance
      - mode [string]: 'simple' (s/sqrt(b+berr^2) or 'complete' (eq.20 of the paper)
     
-    Return: 
-     - var-shaped signifiance [float]
+    Return z0,nfail: 
+     - z0 [float] var-shaped signifiance
+     - nfail [int] number of bins where sig2 is negative or nan
     '''
     
     b,_     = np.histogram(bkg[var], weights=bkg['weight_raw']*lumi     , bins=binning)
@@ -31,8 +32,9 @@ def computeZ0(bkg,sig,lumi,binning,var='ht',mode='complete'):
         term1 = (s+b)*np.log((s+b)*(b+berr2)/(b**2+(s+b)*berr2))
         term2 =  b**2/berr2*np.log(1+berr2*s/b/(b+berr2))
         sig2  = 2*(term1-term2)
-        
+
+    nfail=np.sum(np.isnan(sig2)) + np.sum(np.isnan(sig2))
     sig2[np.isnan(sig2)]=0.0
     sig2[sig2<0]=0.0
-    return np.sqrt(np.sum(sig2))
+    return np.sqrt(np.sum(sig2)),nfail
                                                         
