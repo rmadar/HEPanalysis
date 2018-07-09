@@ -2,7 +2,7 @@
 
 import numpy as np
 
-def computeZ0(bkg,sig,lumi,binning,var='ht',mode='complete'):
+def computeZ0(bkg,sig,lumi,binning,var='HT',mode='complete'):
     '''
     Compute significance using either s/sqrt(b+berr^2) or eq.20 of 
     https://www.pp.rhul.ac.uk/~cowan/stat/medsig/medsigNote.pdf

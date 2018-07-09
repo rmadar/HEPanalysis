@@ -58,7 +58,7 @@ class sample:
             d=pd.DataFrame(root2array(self.config['path']+str(ids)+'.root', 'sumWeights', branches=[wght]).view(np.recarray))
             Ngen[ids]=np.sum(d[wght])
         return Ngen
-            
+
     def get_dataframe(self):
         # Function in function --> good practice?
         #---------------------------------------
