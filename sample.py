@@ -23,7 +23,6 @@ class sample:
     def __init__(self,config,dsid_array,name,latexname,color,df=pd.DataFrame()):
         '''
         config [dictionnary {property:info}] with property=[path,selection,branches,weight]
-        
         '''
         self.config      = config
         self.dsid_array  = dsid_array
@@ -58,8 +57,17 @@ class sample:
 
     def add_observable(self,formula,name):
         self.df[name] = formula(self.df)
-
-
+        
+    def get_Ngen_array(self):
+        # To be tunable from outside
+        dir_path='/home/rmadar/Documents/work/ATLAS/4topSM/general-studies-4topSM/data/'
+        #---------------------------
+        wght,Ngen='totalEventsWeighted_mc_generator_weights',{}
+        for ids in in self.dsid_array:
+            d=pd.DataFrame(root2array(dir_path+str(ids)+'.root', 'sumWeights', branches=[wght]).view(np.recarray))
+            Ngen[ids]=np.sum(d[wght])
+        return Ngen
+            
     def get_dataframe(self):
 
         # Function in function --> good practice?
