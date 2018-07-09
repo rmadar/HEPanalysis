@@ -11,7 +11,7 @@ def csv_to_dataframe(inputname):
     
     for c in df:
         if df[c].dtype=='object':
-            df[c] = d.df[c].apply(fix_csv_array)
+            df[c] = df[c].apply(fix_csv_array)
             
     return df
 
