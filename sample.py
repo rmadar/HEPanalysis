@@ -43,10 +43,7 @@ class sample:
         return sample(s.config,s.dsid_array,s.name,s.latexname,s.color,s.df)
 
     def get_files_list(self):
-        # To be tunable from outside
-        dir_path='/home/rmadar/Documents/work/ATLAS/4topSM/general-studies-4topSM/data/'
-        #---------------------------
-        if (os.path.isdir(dir_path)): return [dir_path+str(ids)+'.root' for ids in self.dsid_array ]
+        if (os.path.isdir(self.config['path'])): return [self.config['path']+str(ids)+'.root' for ids in self.dsid_array ]
         else: print('Sample::get_file_list():: ERROR, data directory is not found')
     
     def apply_selection(self,selection):
@@ -58,13 +55,10 @@ class sample:
     def add_observable(self,formula,name):
         self.df[name] = formula(self.df)
         
-    def get_Ngen_array(self):
-        # To be tunable from outside
-        dir_path='/home/rmadar/Documents/work/ATLAS/4topSM/general-studies-4topSM/data/'
-        #---------------------------
+    def get_Ngen_dict(self):
         wght,Ngen='totalEventsWeighted_mc_generator_weights',{}
         for ids in in self.dsid_array:
-            d=pd.DataFrame(root2array(dir_path+str(ids)+'.root', 'sumWeights', branches=[wght]).view(np.recarray))
+            d=pd.DataFrame(root2array(self.config['path']+str(ids)+'.root', 'sumWeights', branches=[wght]).view(np.recarray))
             Ngen[ids]=np.sum(d[wght])
         return Ngen
             
@@ -98,14 +92,13 @@ class sample:
         #---------------------------------------
         
 
-        # this part should be tunable from outside the class - need to think how to do it properly
+
+        # Read the configuration of the sample and get the dataset
         #-----------------------------------------------------------
-        weightBranches = ['weight_mc','weight_pileup','weight_leptonSF_tightLeps','weight_bTagSF_77','weight_jvt']
-        UsedBranches   = ['jet_pt','jet_mv2c20','jet_mv2c10','lep_pt','ht','met_met']+weightBranches
-        Usedselections =  'SSee_2015 || SSee_2016 || SSem_2015 || SSem_2016 || SSmm_2015 || SSmm_2016 ||'
-        Usedselections += 'eee_2015  || eee_2016  || eem_2015  || eem_2016  || emm_2015  || emm_2016 || mmm_2015 || mmm_2016'
+        weightBranches = self.config['wght_branches']
+        UsedBranches   = self.config['var_branches']
+        Usedselections = self.config['selection']
         UsedBranches   += Usedselections.replace(' ','').split('||')
-        #-----------------------------------------------------------
         
         data_array = []
         for fname in self.filelist:
@@ -115,10 +108,8 @@ class sample:
             if(thisdata.empty): continue
 
             # add xsec weights
-            rootfile = ROOT.TFile(fname)
-            w_xsec   = 1.0/rootfile.Get('hIntLum').GetBinContent(1)
-            thisdata['weight'] = w_xsec
-            for wname in weightBranches: thisdata['weight'] *= thisdata[wname]
+            get_weight = self.config['getweight']
+            get_weight(rootfile,thisdata,weightBranches)
 
             # flat arrays for non e
             for var in thisdata.columns.tolist():
