@@ -14,9 +14,6 @@ warnings.filterwarnings('ignore')
 ### TO DO ###
 # 1. add method to access the tree (process both with pandas and root)
 # 2. improve the string formating function
-# 3. improve the management of weights
-# 4. improve the interface from outside with branches,
-# selection and path thanks to a dictionnary
 
 
 class sample:
@@ -57,13 +54,12 @@ class sample:
         
     def get_Ngen_dict(self):
         wght,Ngen='totalEventsWeighted_mc_generator_weights',{}
-        for ids in in self.dsid_array:
+        for ids in self.dsid_array:
             d=pd.DataFrame(root2array(self.config['path']+str(ids)+'.root', 'sumWeights', branches=[wght]).view(np.recarray))
             Ngen[ids]=np.sum(d[wght])
         return Ngen
             
     def get_dataframe(self):
-
         # Function in function --> good practice?
         #---------------------------------------
         def flatten(column):
@@ -89,34 +85,41 @@ class sample:
                 return x[i]
             except IndexError:
                 return 0.
+
+        def sel_to_var(sel):
+            var_array = sel.replace(' ','').split('||')
+            return var_array
         #---------------------------------------
         
-
 
         # Read the configuration of the sample and get the dataset
         #-----------------------------------------------------------
         weightBranches = self.config['wght_branches']
-        UsedBranches   = self.config['var_branches']
-        Usedselections = self.config['selection']
-        UsedBranches   += Usedselections.replace(' ','').split('||')
+        varBranches    = self.config['var_branches']
+        usedselections = self.config['selection']
+        usedBranches   = varBranches+weightBranches+sel_to_var(usedselections)  
         
         data_array = []
         for fname in self.filelist:
 
             # load data
-            thisdata = pd.DataFrame(root2array(fname, 'nominal_Loose', branches=UsedBranches, selection=Usedselections).view(np.recarray))
+            thisdata = pd.DataFrame(root2array(fname, 'nominal_Loose', branches=usedBranches, selection=usedselections).view(np.recarray))
             if(thisdata.empty): continue
 
             # add xsec weights
             get_weight = self.config['getweight']
-            get_weight(rootfile,thisdata,weightBranches)
+            get_weight(ROOT.TFile.Open(fname),thisdata,weightBranches)
 
-            # flat arrays for non e
-            for var in thisdata.columns.tolist():
-                try:
-                    if ( type(thisdata[var][0]) is np.ndarray ):
-                        flat_variable(thisdata, var)
-                except IndexError: print 'IndexError, I am not sure why'
+            # flat arrays for variable arrays branches
+            if 'var_flat' in self.config:
+                for v,n in self.config['var_flat']:
+                    flat_variable(thisdata,v,n)
+            else:
+                for v in thisdata.columns.tolist():
+                    try:
+                        if ( type(thisdata[var][0]) is np.ndarray ):
+                            flat_variable(thisdata, var)
+                    except IndexError: print 'IndexError, I am not sure why'
 
             # append this dataset
             data_array.append(thisdata)
