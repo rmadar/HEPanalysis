@@ -7,6 +7,9 @@ import numpy  as np
 import ROOT
 from   root_numpy import root2array
 
+# My tools
+import pd_utils as pdu
+
 # Disable warnings
 import warnings
 warnings.filterwarnings('ignore')
@@ -53,52 +56,18 @@ class sample:
         self.df[name] = formula(self.df)
         
     def get_Ngen_dict(self):
-        wght,Ngen='totalEventsWeighted_mc_generator_weights',{}
+        wghts,Ngen=['totalEvents','totalEventsWeighted'],{}
         for ids in self.dsid_array:
-            d=pd.DataFrame(root2array(self.config['path']+str(ids)+'.root', 'sumWeights', branches=[wght]).view(np.recarray))
-            Ngen[ids]=np.sum(d[wght])
+            d=pd.DataFrame(root2array(self.config['path']+str(ids)+'.root', 'sumWeights', branches=wghts).view(np.recarray))
+            Ngen[ids]=[np.sum(d[w].values) for w in wghts]
         return Ngen
 
     def get_dataframe(self):
-        # Function in function --> good practice?
-        #---------------------------------------
-        def flatten(column):
-            try:
-                return np.array([v for e in column for v in e])
-            except (TypeError, ValueError):
-                return column
-            
-        def match_shape(arr, ref):
-            shape = [len(a) for a in ref]
-            if len(arr) != np.sum(shape):
-                raise ValueError('Incompatible shapes: len(arr) = {}, total elements in ref: {}'.format(len(arr), np.sum(shape)))
-            return [arr[ptr:(ptr + nobj)].tolist() for (ptr, nobj) in zip(np.cumsum([0] + shape[:-1]), shape)]    
-        
-        def flat_variable(df, varname, Nelements=10):
-            for i in range(0,Nelements):
-                bname=varname+str(i)
-                df[bname] = df[varname].apply(lambda c: get_value(c,i))
-            return
-
-        def get_value(x,i):
-            try:
-                return x[i]
-            except IndexError:
-                return 0.
-
-        def sel_to_var(sel):
-            var_array = sel.replace(' ','').split('||')
-            return var_array
-        #---------------------------------------
-        
-
-        # Read the configuration of the sample and get the dataset
-        #-----------------------------------------------------------
         weightBranches = self.config['wght_branches']
         varBranches    = self.config['var_branches']
         usedselections = self.config['selection']
-        usedBranches   = varBranches+weightBranches+sel_to_var(usedselections)  
-        
+        usedBranches   = varBranches+weightBranches+sel_to_var(usedselections)          
+
         data_array = []
         for fname in self.filelist:
 
@@ -113,12 +82,12 @@ class sample:
             # flat arrays for variable arrays branches
             if 'var_flat' in self.config:
                 for v,n in self.config['var_flat']:
-                    flat_variable(thisdata,v,n)
+                    pdu.flat_variable(thisdata,v,n)
             else:
                 for v in thisdata.columns.tolist():
                     try:
                         if ( type(thisdata[var][0]) is np.ndarray ):
-                            flat_variable(thisdata, var)
+                            pdu.flat_variable(thisdata, var)
                     except IndexError: print 'IndexError, I am not sure why'
 
             # append this dataset
