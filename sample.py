@@ -66,7 +66,7 @@ class sample:
         weightBranches = self.config['wght_branches']
         varBranches    = self.config['var_branches']
         usedselections = self.config['selection']
-        usedBranches   = varBranches+weightBranches+sel_to_var(usedselections)          
+        usedBranches   = varBranches+weightBranches+pdu.sel_to_var(usedselections)          
 
         data_array = []
         for fname in self.filelist:
