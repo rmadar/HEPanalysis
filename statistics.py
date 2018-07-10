@@ -19,10 +19,13 @@ def computeZ0(bkg,sig,lumi,binning,var='HT',mode='complete'):
      - z0 [float] var-shaped signifiance
      - nfail [int] number of bins where sig2 is negative or nan
     '''
+
+    bkg_v,sig_v=bkg[var].values,sig[var].values
+    bkg_w,sig_w=bkg['weight_raw'].values,sig['weight_raw'].values
     
-    b,_     = np.histogram(bkg[var], weights=bkg['weight_raw']*lumi     , bins=binning)
-    s,_     = np.histogram(sig[var], weights=sig['weight_raw']*lumi     , bins=binning)
-    berr2,_ = np.histogram(bkg[var], weights=(bkg['weight_raw']*lumi)**2, bins=binning)
+    b,_     = np.histogram(bkg_v, weights=bkg_w*lumi     , bins=binning)
+    s,_     = np.histogram(sig_v, weights=sig_w*lumi     , bins=binning)
+    berr2,_ = np.histogram(bkg_v, weights=(bkg_w*lumi)**2, bins=binning)
     
     if (mode=='simple'):
         err2 = b
