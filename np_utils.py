@@ -97,7 +97,7 @@ def square_jagged_2Darray(a,**kwargs):
     return out
 
 
-def all_pairs_nd(a,b,axis=1):
+def all_pairs_nd(a,b=None,axis=1,timing=False):
     '''
     Compute all possible pairs along a given axis.
 
@@ -108,7 +108,7 @@ def all_pairs_nd(a,b,axis=1):
     distance is wanted. In that case, one has:
       a.shape=(Nevts, 5,3)
       b.shape=(Nevts,10,3)
-      all_pairs_nd(a,b,axis=1).shape=(Nevts,50,2,3)
+      all_pairs_nd(a,b).shape=(Nevts,50,2,3)
     
     NB1: If a and b are the same arrays, the unordered/unrepeated combinations 
          are performed.
@@ -128,6 +128,9 @@ def all_pairs_nd(a,b,axis=1):
     axis: int
         The dimension along which the pairing is done (axis=1 if not specified since
         the most common HEP array is (Nevt,Nobj,k)).
+    timing: boolean
+        Print the time of each of the four main steps and the total one (useful
+        to degub).
     
     Returns
     -------
@@ -175,43 +178,64 @@ def all_pairs_nd(a,b,axis=1):
       ])
     '''
     
+    from timeit import default_timer
+    t0 = default_timer()
+    
+    # Is it the same collection
+    same_arrays = b is None
+    
     # Sanity check
-    good_shape=np.array_equal(np.delete(a.shape,axis),np.delete(b.shape,axis))
-    if not good_shape:
-        err  = 'The shape along all dimensions but the one of axis={}'.format(axis)
-        err += ' should be equal, while here:\n'
-        err += '  -> shape of a is {} \n'.format(a.shape)
-        err += '  -> shape of b is {} \n'.format(b.shape)
-        raise NameError(err)
+    if not same_arrays:
+        good_shape=np.array_equal(np.delete(a.shape,axis),np.delete(b.shape,axis))
+        if not good_shape:
+            err  = 'The shape along all dimensions but the one of axis={}'.format(axis)
+            err += ' should be equal, while here:\n'
+            err += '  -> shape of a is {} \n'.format(a.shape)
+            err += '  -> shape of b is {} \n'.format(b.shape)
+            raise NameError(err)
     
+    t1 = default_timer()
+    if timing: print('   * Sanity checks done in {:.3f}s'.format(t1-t0))
+          
     # Individual indices
-    a,b=np.asarray(a),np.asarray(b)
-    ia,jb=np.arange(a.shape[axis]),np.arange(b.shape[axis])
+    if same_arrays:
+        ia,jb=np.arange(a.shape[axis]),[]
+    else:
+        ia,jb=np.arange(a.shape[axis]),np.arange(b.shape[axis])
     
+    t2 = default_timer()
+    if timing: print('   * Individual indices done in {:.3f}'.format(t2-t1))
+          
     # Pairs of indicies
     dt=np.dtype([('', np.intp)]*2)
-    if np.array_equal(a,b): 
-        ij=np.fromiter(itertools.combinations(ia,2),dtype=dt)
-    else: 
-        ij=np.fromiter(itertools.product(ia,jb),dtype=dt)
+    if same_arrays: ij=np.fromiter(itertools.combinations(ia,2),dtype=dt)     
+    else          : ij=np.fromiter(itertools.product(ia,jb),dtype=dt)
     ij=ij.view(np.intp).reshape(-1, 2)
     
+    t3 = default_timer()
+    if timing: print('   * Pairs of indices done in {:.3f}s'.format(t3-t2))
+          
     # Array of all pairs
-    ipair,jpair=ij[:,0],ij[:,1]
-    return np.stack([a.take(ipair,axis=axis),b.take(jpair,axis=axis)],axis=axis+1)
+    if same_arrays: out=np.take(a,ij,axis=axis)
+    else          : out=np.stack([a.take(ij[:,0],axis=axis),b.take(ij[:,1],axis=axis)],axis=axis+1)
+          
+    t4 = default_timer()
+    if timing: print('   * Take and stack arrays done in {:.3f}s'.format(t4-t3))
+    if timing: print(' ==> total time: {:.3f}'.format(t4-t0))
+    
+    return out
 
 
 def df2array(df,variables,**kwargs):
     '''
-    Convert a pandas dataframe column into a regular 2D array using
-    square_jagged_2Darray(a,**kwargs).
+    Convert a list of Ncols pandas dataframe columns into a 
+    regular (Nevt,Nmax,Ncol)-dim numpy array (where Nmax is
+    the largest multiplicity of the collection)
 
     Parameters
     ----------
     df: pandas.DataFrame
-        Inital DataFrame containing the information
-    variables: list of string
-        List of column name to extract
+    variables: list of column name to extract
     
     keyword arguments
     -----------------
@@ -221,5 +245,22 @@ def df2array(df,variables,**kwargs):
     -------
     output: np.array
         3D array given by square_jagged_2Darray(a,**kwargs)
+        
+    Examples
+    --------
+    
+    TODO:
+    -----
+     - Understand and add a security against:
+     >>> test=npu.df2array(df,['el_pt' ,'jet_pt'])
+     >>> /cvmfs/sft.cern.ch/lcg/views/LCG_93/x86_64-slc6-gcc62-opt/lib/python2.7/site-packages/numpy/core/shape_base.pyc in stack(arrays, axis)
+            352     shapes = set(arr.shape for arr in arrays)
+            353     if len(shapes) != 1:
+        --> 354         raise ValueError('all input arrays must have the same shape')
+            355 
+            356     result_ndim = arrays[0].ndim + 1
+
+         ValueError: all input arrays must have the same shape
     '''
+    
     return np.stack([square_jagged_2Darray(df[v].values,**kwargs) for v in variables],axis=2)
