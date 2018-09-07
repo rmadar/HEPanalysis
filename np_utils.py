@@ -110,7 +110,7 @@ def all_pairs_nd(a,b=None,axis=1,timing=False):
       b.shape=(Nevts,10,3)
       all_pairs_nd(a,b).shape=(Nevts,50,2,3)
     
-    NB1: If a and b are the same arrays, the unordered/unrepeated combinations 
+    NB1: If only a is given, the unordered/unrepeated combinations 
          are performed.
     NB2: all axis must have the same dimension, expect the one along which the 
          pairing is done.
@@ -166,7 +166,7 @@ def all_pairs_nd(a,b=None,axis=1,timing=False):
          ]
        ])
     >>>
-    >>> all_pairs_nd(a,a)
+    >>> all_pairs_nd(a)
     >>> array([
         [
          [[0, 1],[2, 3]],
