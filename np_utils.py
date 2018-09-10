@@ -58,17 +58,19 @@ def square_jagged_2Darray(a,**kwargs):
     
     # Sanity checks
     if a.ndim>=2:
-        err  = 'The input array a should be a 1D array of 1D arrays. This means that '
-        err += 'a.shape=(N,) while here '
+        err  = 'The input array a should be a 1D array of 0D/1D arrays. This means that '
+        err += 'a.shape=(N,) or (1,) while here '
         err += 'a.shape={}'.format(a.shape)
         raise NameError(err)    
     dims=np.array([e.ndim for e in a])
     Neq0,Ngt2=np.count_nonzero(dims==0),np.count_nonzero(dims>=2)
+    if Neq0==len(a):
+        return a
     if Neq0>0 or Ngt2>0:
         err  = 'The input array should be a 1D array of 1D arrays'
         err += ' in order to be converted into a 2D array.\n Some'
-        err += ' of the sub-array has dim>=2 or dim==0 (ie not an array):\n'
-        err += '  -> Nubmer of d==0 element: {}\n'.format(Neq0)
+        err += ' of the sub-array have dim>=2 or dim=0 (ie not an array):\n'
+        err += '  -> Number of d==0 element: {} (if ==len(a), it\'s not a jagged array!)\n'.format(Ngt2)
         err += '  -> Number of d>=2 element: {}\n'.format(Ngt2)
         raise NameError(err)
     
@@ -97,7 +99,7 @@ def square_jagged_2Darray(a,**kwargs):
     return out
 
 
-def all_pairs_nd(a,b=None,axis=1,timing=False):
+def all_pairs_nd(a,b=None,Nmax=None,axis=1,timing=False):
     '''
     Compute all possible pairs along a given axis.
 
@@ -124,7 +126,10 @@ def all_pairs_nd(a,b=None,axis=1,timing=False):
     b: np.ndarray
         The array contains the objects collection for each event. If Nobj
         is the number of objects and l the number of variable of each object b
-        (e.g. [px,py,pz,E,btagg,iso]): l must be equal to k and b.shape=(Nevt,Nobj_b,k)
+        (e.g. [px,py,pz,E,btagg,iso]): l must be equal to k and b.shape=(Nevt,Nobj_b,k).
+        If not specified, combinations of a elements are returned.
+    Nmax: int
+        Maximal number of elements considered to compute all combinations
     axis: int
         The dimension along which the pairing is done (axis=1 if not specified since
         the most common HEP array is (Nevt,Nobj,k)).
@@ -136,7 +141,7 @@ def all_pairs_nd(a,b=None,axis=1,timing=False):
     -------
     pairs: nd.ndarray
         For each event (element along axis=0), the output array has Npairs of 2 objects,
-        meaning that output.shape=(Nevt, Nobj_a x Nobj_b, 2, k).
+        meaning that output.shape=(Nevt, Npairs, 2, k).
                  
     Examples
     --------
@@ -176,6 +181,13 @@ def all_pairs_nd(a,b=None,axis=1,timing=False):
          [[2, 3],[4, 5]]
         ]
       ])
+    >>>
+    >>> npu.all_pairs_nd(a,Nmax=2)
+    >>> array([
+      [
+       [[0, 1],[2, 3]]
+      ]
+    ])
     '''
     
     from timeit import default_timer
@@ -183,7 +195,7 @@ def all_pairs_nd(a,b=None,axis=1,timing=False):
     
     # Is it the same collection
     same_arrays = b is None
-    
+        
     # Sanity check
     if not same_arrays:
         good_shape=np.array_equal(np.delete(a.shape,axis),np.delete(b.shape,axis))
@@ -193,6 +205,13 @@ def all_pairs_nd(a,b=None,axis=1,timing=False):
             err += '  -> shape of a is {} \n'.format(a.shape)
             err += '  -> shape of b is {} \n'.format(b.shape)
             raise NameError(err)
+    
+    # Reduce the number of objects to Nmax
+    if Nmax:
+        sl=[slice(None)]*a.ndim
+        sl[axis]=slice(0,Nmax)
+        if same_arrays: a,b=a[sl],None
+        else          : a,b=a[sl],b[sl]
     
     t1 = default_timer()
     if timing: print('   * Sanity checks done in {:.3f}s'.format(t1-t0))
@@ -229,13 +248,16 @@ def all_pairs_nd(a,b=None,axis=1,timing=False):
 def df2array(df,variables,**kwargs):
     '''
     Convert a list of Ncols pandas dataframe columns into a 
-    regular (Nevt,Nmax,Ncol)-dim numpy array (where Nmax is
-    the largest multiplicity of the collection)
+    regular (Nevt,Nobj,Ncol)-dim numpy array.
+    
+    In practice, the exact size of the final array is Nevt 
+    (the number of events), Nobj (number of objects) and Ncol
+    which is the number of float for each event and object.
 
     Parameters
     ----------
     df: pandas.DataFrame
-    variables: list of column name to extract
+    variables: list of column names to extract
     
     keyword arguments
     -----------------
@@ -244,23 +266,88 @@ def df2array(df,variables,**kwargs):
     Returns
     -------
     output: np.array
-        3D array given by square_jagged_2Darray(a,**kwargs)
+        3D array given with output.shape=(df[v].shape[0],df[v].shape[1],len(variables))
         
     Examples
     --------
-    
-    TODO:
-    -----
-     - Understand and add a security against:
-     >>> test=npu.df2array(df,['el_pt' ,'jet_pt'])
-     >>> /cvmfs/sft.cern.ch/lcg/views/LCG_93/x86_64-slc6-gcc62-opt/lib/python2.7/site-packages/numpy/core/shape_base.pyc in stack(arrays, axis)
-            352     shapes = set(arr.shape for arr in arrays)
-            353     if len(shapes) != 1:
-        --> 354         raise ValueError('all input arrays must have the same shape')
-            355 
-            356     result_ndim = arrays[0].ndim + 1
+    >>>
+    >>> data=pd.DataFrame(data={
+        'jet_eta':np.array([np.array([1,2,3]),np.array([4,5])]),
+        'jet_phi':np.array([np.array([6,7,8]),np.array([9,10])]),
+        })
+    >>> print(data)
+    >>>      jet_eta    jet_phi
+        0  [1, 2, 3]  [6, 7, 8]
+        1     [4, 5]    [9, 10]
+    >>>
+    >>> jets_direction=npu.df2array(data,['jet_eta','jet_phi'])
+    >>> jets_direction
+    >>> array([[[  1.,   6.],
+        [  2.,   7.],
+        [  3.,   8.]],
 
-         ValueError: all input arrays must have the same shape
+       [[  4.,   9.],
+        [  5.,  10.],
+        [ nan,  nan]]], dtype=float32)
     '''
     
-    return np.stack([square_jagged_2Darray(df[v].values,**kwargs) for v in variables],axis=2)
+    # Get the list of all arrays, each of shape: (Nevts,Nobj)
+    list_arrays = [square_jagged_2Darray(df[v].values,**kwargs) for v in variables]
+    
+    # Check that there are a collection (and not only value, like MET)
+    dims=np.array([e.ndim for e in list_arrays])
+    isCollection=False
+    if np.count_nonzero(dims>1)>0:
+        isCollection=True
+    
+    # Check that the number of object is the same for all column
+    if isCollection:
+        axis=2
+        if np.std([a.shape[1] for a in list_arrays])!=0:
+            err ='The shape along the dimensions of axis=1 (number of objects) '
+            err+='must be the same for all variables. This function cannot merge different '
+            err+='object collections (eg "jet_pT" and "ele_pT").\n'
+            err+='If you need to do so, check stack_collection() functions.'
+            raise NameError(err)
+    else:
+        axis=1
+        
+    # Adding a dimension for further concatenation. The new shape is (Nevts,Nobj,1)
+    list_arrays = [a[...,None] for a in list_arrays]
+    
+    # Performe the concatenation and output shape is (Nevts,Nobj,Nvariables)
+    return np.concatenate(list_arrays,axis=axis)
+
+
+def stack_collections(arrays):
+    '''
+    TODO: write the docstring
+    '''
+    # Check there are collection
+    dims=np.array([e.ndim for e in arrays])
+    isCollection=False
+    if np.count_nonzero(dims<=0)>0:
+        err ='One of the array is not a collection, while this function needs ' 
+        err+='collections of objects (ie at least 2D arrays - 1D for events '
+        err+='and 1D for the collection'
+        raise NameError(err)
+    
+    # Check that the number of object is the same for all column
+    if np.std([a.shape[2] for a in arrays])!=0:
+        err ='The shape along the dimensions of axis=2 (number of variables per object) '
+        err+='must be the same for all objects. This function cannot merge '
+        err+='collections with different number of variables (eg [jet_pT,jet_eta] and [ele_pT]).\n'
+        raise NameError(err)
+    
+    out = np.concatenate(arrays,axis=1)
+    return out
+
+
+def replace_nan(a,value=0):
+    '''
+    TODO: write the docstring
+    '''
+    import copy
+    out=copy.copy(a)
+    out[np.isnan(out)]=value
+    return out
