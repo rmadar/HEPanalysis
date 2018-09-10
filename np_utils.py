@@ -1,6 +1,13 @@
 import numpy as np
 import itertools
 
+def contains_collections(arrays):
+    '''
+    
+    '''
+    dims=np.array([e.ndim for e in arrays])
+    return np.count_nonzero(dims>1)>0
+
 def square_jagged_2Darray(a,**kwargs):    
     '''
     Give the same dimension to all raws of a jagged 2D array.
@@ -97,6 +104,7 @@ def square_jagged_2Darray(a,**kwargs):
     if size: out=out[:,:size]
     
     return out
+
 
 
 def all_pairs_nd(a,b=None,Nmax=None,axis=1,timing=False):
@@ -245,6 +253,7 @@ def all_pairs_nd(a,b=None,Nmax=None,axis=1,timing=False):
     return out
 
 
+
 def df2array(df,variables,**kwargs):
     '''
     Convert a list of Ncols pandas dataframe columns into a 
@@ -295,11 +304,12 @@ def df2array(df,variables,**kwargs):
     list_arrays = [square_jagged_2Darray(df[v].values,**kwargs) for v in variables]
     
     # Check that there are a collection (and not only value, like MET)
-    dims=np.array([e.ndim for e in list_arrays])
-    isCollection=False
-    if np.count_nonzero(dims>1)>0:
-        isCollection=True
+    isCollection=contains_collections(list_arrays)
     
+    # Adding a dimension for further concatenation in case of 
+    # (Nevts,Nobj) shape; new shape is (Nevts,Nobj,1)
+    list_arrays = [a[...,None] if a.ndim==2 else a for a in list_arrays]
+        
     # Check that the number of object is the same for all column
     if isCollection:
         axis=2
@@ -311,29 +321,111 @@ def df2array(df,variables,**kwargs):
             raise NameError(err)
     else:
         axis=1
-        
-    # Adding a dimension for further concatenation. The new shape is (Nevts,Nobj,1)
-    list_arrays = [a[...,None] for a in list_arrays]
     
     # Performe the concatenation and output shape is (Nevts,Nobj,Nvariables)
     return np.concatenate(list_arrays,axis=axis)
 
 
+
+
 def stack_collections(arrays):
     '''
-    TODO: write the docstring
+    Stack list of arrays of shape (Nevts,Nobj_i,Nval) along axis=1.
+    
+    The typical use case of the function is to build a single collection
+    of objects from different collections. Let's take the example where
+    one wants to make a 'lepton' collection out of 'electron' and 'muon'
+    collection: each collection has Nval variables so that each array will
+    be of shape el.shape=(Nevts,Nel,Nval) and mu.shape=(Nevts,Nmu,Nval).
+    lep=stack_collections([el,mu]) will have lep.shape(Nevt,Nel+Nmu,Nval).
+   
+   
+    Parameters:
+    ----------
+    arrays: list of ndarray
+        arrays which needs to be stacked
+   
+   
+    Return:
+    -------
+    output: ndarray
+        array of shape (Nevt,Ntot,Nval) where Ntot
+        is the sum of all objects (e.g. Nlep+Njet)
+   
+   
+    Examples:
+    --------
+    >>> a=np.arange(30).reshape(2,5,3)
+    >>> a # 2 events, 5 objects, 3 variables
+    >>> array([
+        [
+         [ 0,  1,  2],
+         [ 3,  4,  5],
+         [ 6,  7,  8],
+         [ 9, 10, 11],
+         [12, 13, 14]
+        ],
+
+       [
+         [15, 16, 17],
+         [18, 19, 20],
+         [21, 22, 23],
+         [24, 25, 26],
+         [27, 28, 29]
+        ]
+      ])
+    >>>
+    >>> b=np.arange(12).reshape(2,2,3)
+    >>> b # 2 events, 2 objects, 3 variables
+    >>> array([
+         [
+          [ 0,  1,  2],
+          [ 3,  4,  5]
+         ],
+
+         [
+          [ 6,  7,  8],
+          [ 9, 10, 11]
+         ]
+        ])
+    >>> 
+    >>> npu.stack_collections([a,b])
+    >>> array([
+         [
+          [ 0,  1,  2],
+          [ 3,  4,  5],
+          [ 6,  7,  8],
+          [ 9, 10, 11],
+          [12, 13, 14],
+          [ 0,  1,  2],
+          [ 3,  4,  5]
+         ], 
+
+         [
+          [15, 16, 17],
+          [18, 19, 20],
+          [21, 22, 23],
+          [24, 25, 26],
+          [27, 28, 29],
+          [ 6,  7,  8],
+          [ 9, 10, 11]
+         ]
+        ])
     '''
+    
     # Check there are collection
-    dims=np.array([e.ndim for e in arrays])
-    isCollection=False
-    if np.count_nonzero(dims<=0)>0:
+    if not contains_collections(arrays):
         err ='One of the array is not a collection, while this function needs ' 
         err+='collections of objects (ie at least 2D arrays - 1D for events '
         err+='and 1D for the collection'
         raise NameError(err)
-    
-    # Check that the number of object is the same for all column
-    if np.std([a.shape[2] for a in arrays])!=0:
+           
+    # Check that the number of variables per object is the same for all column
+    has_one_var= np.count_nonzero([a.ndim==1 for a in arrays])==len(arrays)
+    if not has_one_var: is_ok=True
+    elif len(np.unique([a.shape[2] for a in arrays]))!=0: is_ok=False
+    else: is_ok=True
+    if not is_ok:
         err ='The shape along the dimensions of axis=2 (number of variables per object) '
         err+='must be the same for all objects. This function cannot merge '
         err+='collections with different number of variables (eg [jet_pT,jet_eta] and [ele_pT]).\n'
@@ -345,9 +437,41 @@ def stack_collections(arrays):
 
 def replace_nan(a,value=0):
     '''
-    TODO: write the docstring
+    Replace all np.nan from a by value (0 by default)
+    
+    Parameters:
+    ----------
+    a: ndarray
+        array where nan have to be replaced
+    value: float
+        value to replace nan
+    
+    Return:
+    -------
+    output: ndarray
+        copy of the initial array where all np.nan are replace
+        by value
+        
+    Examples:
+    --------
+    >>> a=np.array([[[  1.,   6.],
+        [  2.,   7.],
+        [  3.,   8.]],
+
+       [[  4.,   9.],
+        [  5.,  10.],
+        [ nan,  nan]]], dtype=float32)
+    >>>
+    >>> replace_nan(a,99)
+    >>> array([[[  1.,   6.],
+        [  2.,   7.],
+        [  3.,   8.]],
+
+       [[  4.,   9.],
+        [  5.,  10.],
+        [ 99.,  99.]]], dtype=float32)
     '''
     import copy
-    out=copy.copy(a)
-    out[np.isnan(out)]=value
-    return out
+    output=copy.copy(a)
+    output[np.isnan(output)]=value
+    return output
