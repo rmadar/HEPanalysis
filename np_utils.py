@@ -1,12 +1,59 @@
 import numpy as np
 import itertools
 
+
+
 def contains_collections(arrays):
     '''
-    
+    Return True if at least one of the dimension
+    of the sub-array in arrays is at least 1.
     '''
     dims=np.array([e.ndim for e in arrays])
-    return np.count_nonzero(dims>1)>0
+    return np.count_nonzero(dims>=1)>0
+
+
+def replace_nan(a,value=0):
+    '''
+    Replace all np.nan from a by value (0 by default)
+    
+    Parameters:
+    ----------
+    a: ndarray
+        array where nan have to be replaced
+    value: float
+        value to replace nan
+    
+    Return:
+    -------
+    output: ndarray
+        copy of the initial array where all np.nan are replace
+        by value
+        
+    Examples:
+    --------
+    >>> a=np.array([[[  1.,   6.],
+        [  2.,   7.],
+        [  3.,   8.]],
+
+       [[  4.,   9.],
+        [  5.,  10.],
+        [ nan,  nan]]], dtype=float32)
+    >>>
+    >>> replace_nan(a,99)
+    >>> array([[[  1.,   6.],
+        [  2.,   7.],
+        [  3.,   8.]],
+
+       [[  4.,   9.],
+        [  5.,  10.],
+        [ 99.,  99.]]], dtype=float32)
+    '''
+    import copy
+    output=copy.copy(a)
+    output[np.isnan(output)]=value
+    return output
+
+
 
 def square_jagged_2Darray(a,**kwargs):    
     '''
@@ -433,45 +480,3 @@ def stack_collections(arrays):
     
     out = np.concatenate(arrays,axis=1)
     return out
-
-
-def replace_nan(a,value=0):
-    '''
-    Replace all np.nan from a by value (0 by default)
-    
-    Parameters:
-    ----------
-    a: ndarray
-        array where nan have to be replaced
-    value: float
-        value to replace nan
-    
-    Return:
-    -------
-    output: ndarray
-        copy of the initial array where all np.nan are replace
-        by value
-        
-    Examples:
-    --------
-    >>> a=np.array([[[  1.,   6.],
-        [  2.,   7.],
-        [  3.,   8.]],
-
-       [[  4.,   9.],
-        [  5.,  10.],
-        [ nan,  nan]]], dtype=float32)
-    >>>
-    >>> replace_nan(a,99)
-    >>> array([[[  1.,   6.],
-        [  2.,   7.],
-        [  3.,   8.]],
-
-       [[  4.,   9.],
-        [  5.,  10.],
-        [ 99.,  99.]]], dtype=float32)
-    '''
-    import copy
-    output=copy.copy(a)
-    output[np.isnan(output)]=value
-    return output
