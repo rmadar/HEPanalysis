@@ -1,12 +1,6 @@
 import numpy as np
 import itertools
 
-def shape_jagged_2Darray(a):
-    '''
-    '''
-    lengths = np.array([len(i) for i in a])
-    return (a.shape[0],np.max(lengths))
-
 def replace_nan(a,value=0):
     '''
     Replace all np.nan from a by value (0 by default) and return 
