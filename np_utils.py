@@ -1,7 +1,21 @@
 import numpy as np
 import itertools
 
+def shape_jagged_2Darray(a):
+    '''
+    '''
+    lengths = np.array([len(i) for i in a])
+    return (a.shape[0],np.max(lengths))
 
+def replace_nan(a,value=0):
+    '''
+    Replace all np.nan from a by value (0 by default) and return 
+    a copy of the initial array.
+    '''
+    import copy
+    output=copy.copy(a)
+    output[np.isnan(output)]=value
+    return output
 
 def contains_collections(arrays):
     '''
@@ -10,48 +24,6 @@ def contains_collections(arrays):
     '''
     dims=np.array([e.ndim for e in arrays])
     return np.count_nonzero(dims>=1)>0
-
-
-def replace_nan(a,value=0):
-    '''
-    Replace all np.nan from a by value (0 by default)
-    
-    Parameters:
-    ----------
-    a: ndarray
-        array where nan have to be replaced
-    value: float
-        value to replace nan
-    
-    Return:
-    -------
-    output: ndarray
-        copy of the initial array where all np.nan are replace
-        by value
-        
-    Examples:
-    --------
-    >>> a=np.array([[[  1.,   6.],
-        [  2.,   7.],
-        [  3.,   8.]],
-
-       [[  4.,   9.],
-        [  5.,  10.],
-        [ nan,  nan]]], dtype=float32)
-    >>>
-    >>> replace_nan(a,99)
-    >>> array([[[  1.,   6.],
-        [  2.,   7.],
-        [  3.,   8.]],
-
-       [[  4.,   9.],
-        [  5.,  10.],
-        [ 99.,  99.]]], dtype=float32)
-    '''
-    import copy
-    output=copy.copy(a)
-    output[np.isnan(output)]=value
-    return output
 
 
 
@@ -75,9 +47,9 @@ def square_jagged_2Darray(a,**kwargs):
     dtype: string
         data type of the variable-size array. If not specified, 
         it is 'float32'. None means dt=data.dt.
-    size: int
-        size of array. if not specified (or None), this size is 
-        the maximum size of all raws.
+    nobj: int
+        max size of the array.shape[1]. if not specified (or None), 
+        this size is the maximum size of all raws.
     val: float32
         default value used to fill empty elements in order to get 
         the proper size. If not specified (or None), val is np.nan.
@@ -85,7 +57,7 @@ def square_jagged_2Darray(a,**kwargs):
     Returns
     -------
     out: np.ndarray
-        with a dimension (ncol,size).
+        with a dimension (ncol,nobj).
              
     Examples
     --------
@@ -103,7 +75,7 @@ def square_jagged_2Darray(a,**kwargs):
        [  8.,  nan,  nan,  nan,  nan],
        [  9.,  10.,  11.,  12.,  13.]], dtype=float32)
     >>>
-    >>> square_jagged_2Darray(a,size=2,val=-999)
+    >>> square_jagged_2Darray(a,nobj=2,val=-999)
     >>> array([[   1.,    2.],
        [   6.,    7.],
        [   8., -999.],
@@ -131,7 +103,7 @@ def square_jagged_2Darray(a,**kwargs):
     # kwargs
     val,size,dtype=np.nan,None,'float32'
     if 'dtype' in kwargs: dtype=kwargs['dtype']
-    if 'size'  in kwargs: size=kwargs['size']
+    if 'nobj'  in kwargs: size=kwargs['nobj']
     if 'val'   in kwargs: val=kwargs['val']
         
     # Get lengths of each row of data
@@ -303,13 +275,21 @@ def all_pairs_nd(a,b=None,Nmax=None,axis=1,timing=False):
 
 def df2array(df,variables,**kwargs):
     '''
-    Convert a list of Ncols pandas dataframe columns into a 
-    regular (Nevt,Nobj,Ncol)-dim numpy array.
+    Convert a list of Ncols pandas dataframe columns into a regular
+    (Nevt,Nobj,Ncol)-dim numpy array.
     
-    In practice, the exact size of the final array is Nevt 
-    (the number of events), Nobj (number of objects) and Ncol
-    which is the number of float for each event and object.
-
+    In practice, the exact size of the final array is Nevt (the number
+    of events), Nobj (number of objects) and Ncol which is the number of 
+    float for each event and object. 
+    
+    It is possible to give default values in order to later form collections
+    with the same number of variables:
+        jets     =df2array(df,['jet_eta', 'jet_phi', 'jet_bw',     '999'])
+        electrons=df2array(df,[ 'el_pt' ,  'el_phi ,    'nan', 'trk_iso'])
+        pairs    =all_pairs_nd(jets,electrons)
+    This allows to get the electron isolation and the b-tagging weight
+    for the electron-jet pair being the closest to each other.
+    
     Parameters
     ----------
     df: pandas.DataFrame
@@ -346,9 +326,28 @@ def df2array(df,variables,**kwargs):
         [  5.,  10.],
         [ nan,  nan]]], dtype=float32)
     '''
+        
+    # Get the default array with the proper shape
+    if variables[0] not in df.columns:
+        err  = 'The first variable must be a valid column and not a default value.\n'
+        err += 'The variable \'{}\' is not in the list of dataframe columns'.format(variables[0])
+        raise NameError(err)
+    Nevt,Nobj=len(df),np.max([len(i) for i in df[variables[0]].values])
+    if 'nobj'  in kwargs: Nobj=kwargs['nobj']
+    def default_array(str_val):
+        try:               
+            val=float(str_val)
+        except ValueError: 
+            if str_val in ('nan','NaN','Nan','NAN'):
+                val=np.nan
+            else:
+                err  = 'The default value \'{}\' is not supported. Please only use '.format(str_val)
+                err += 'a number in a string (e.g. \'999\') or \'nan\'.'
+                raise NameError(err)
+        return np.full_like(np.zeros((Nevt,Nobj)),val)
     
     # Get the list of all arrays, each of shape: (Nevts,Nobj)
-    list_arrays = [square_jagged_2Darray(df[v].values,**kwargs) for v in variables]
+    list_arrays = [square_jagged_2Darray(df[v].values,**kwargs) if v in df.columns else default_array(v) for v in variables]
     
     # Check that there are a collection (and not only value, like MET)
     isCollection=contains_collections(list_arrays)
