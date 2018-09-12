@@ -20,6 +20,28 @@ def contains_collections(arrays):
     return np.count_nonzero(dims>=1)>0
 
 
+def get_indexed_value(a,index):
+    '''
+    Write docstring
+    Find a better name
+    a.shape=(Nevt,Nobj)
+    index.shape=(Nevt) is the index of the object to get for each event
+    '''
+    N=np.arange(a.shape[0])
+    return np.array( [a[i,index[i]] for i in iEvts] )
+
+
+def get_all_but_indexed_value(a,index):
+    '''
+    Write docstring
+    Find a better name
+    a.shape=(Nevt,Nobj)
+    index.shape=(Nevt) is the index of the object to NOT get for each event
+    '''
+    N=np.arange(a.shape[0])
+    return np.array([np.concatenate([a[i,:index[i]],a[i,index[i]+1:]]) for i in N])
+
+
 
 def square_jagged_2Darray(a,**kwargs):    
     '''
