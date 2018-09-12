@@ -22,22 +22,117 @@ def contains_collections(arrays):
 
 def get_indexed_value(a,index):
     '''
-    Write docstring
-    Find a better name
-    a.shape=(Nevt,Nobj)
-    index.shape=(Nevt) is the index of the object to get for each event
+    Give the an array of indexed values, with an event-dependent index.
+
+    This function takes an array of shape (Nevts,Nobj) and returns an 
+    array of shape (Nevts,). Each element corresponds the value of the 
+    ith object, where i is different for each event and are regrouped 
+    in the array 'index'. For e.g., of one wants the lepton isolation
+    for the lepton having the highest eta:
+     - lep_iso, shape=(Nevts,Nlep)
+     - index=np.argmax(np.abs(lep_eta),axis=1), shape=(Nevts,)
+     - iso_max_eta=get_indexed_value(lep_iso,index), shape=(Nevts,)
+    
+   
+    Parameters
+    ----------
+    a: np.array
+        The shape of this array must be (Nevts,Nobj)
+    index: np.array
+        The shape of this array must be (Nevts,)
+    
+    
+    Returns
+    -------
+    out: np.ndarray
+        The shape of the array is (Nevts,)
+             
+    
+    Examples
+    --------
+    >>> import numpy as np
+    >>> a=np.arange(6).reshape(2,3)
+    >>> a
+    >>> array([[0, 1, 2],
+               [3, 4, 5]])
+    >>>
+    >>> get_indexed_value(a,index=[0,1])
+    >>> array([0, 4])
     '''
+    
+    # Make sure we manipulate numpy arrays
+    a,index=np.array(a),np.array(index)
+    
+    # Sanity checks
+    if a.ndim!=2 or index.ndim!=1:
+        err  = 'This function requires an array \'a\' of dimension 2 (it is currently {})\n'.format(a.ndim)
+        err += 'and an array \'index\' of dimension 1 (it is currently {})'.format(index.ndim)
+        raise NameError(err)
+    if a.shape[0] != index.shape[0]:
+        err  = 'The two array must have the same number of element along the first axis.\n'
+        err += 'while currently \'a\' has {} elements and \'index\' has {}.'.format(a.shape[0],index.shape[0])
+        raise NameError(err)
+    
+    # Actuall work
     N=np.arange(a.shape[0])
-    return np.array( [a[i,index[i]] for i in iEvts] )
+    return np.array( [a[i,index[i]] for i in N] )
 
 
 def get_all_but_indexed_value(a,index):
     '''
-    Write docstring
-    Find a better name
-    a.shape=(Nevt,Nobj)
-    index.shape=(Nevt) is the index of the object to NOT get for each event
+    Give the an array of all values but the indexed ones, with 
+    an event-dependent index.
+
+    This function takes an array of shape (Nevts,Nobj) and returns an 
+    array of shape (Nevts,Nobj-1). Each element corresponds the value of the 
+    all objects but the ith, where i is different for each event and are 
+    regrouped in the array 'index'. For e.g., of one wants the lepton isolation
+    for the all leptons but the one with the highest eta:
+     - lep_iso, shape=(Nevts,Nlep)
+     - index=np.argmax(np.abs(lep_eta),axis=1), shape=(Nevts,)
+     - iso_other_eta=get_all_but_indexed_value(lep_iso,index), shape=(Nevts,Nlep-1)
+    
+   
+    Parameters
+    ----------
+    a: np.array
+        The shape of this array must be (Nevts,Nobj)
+    index: np.array
+        The shape of this array must be (Nevts,)
+    
+    
+    Returns
+    -------
+    out: np.ndarray
+        The shape of the array is (Nevts,Nobj-1)
+             
+    
+    Examples
+    --------
+    >>> import numpy as np
+    >>> a=np.arange(6).reshape(2,3)
+    >>> a
+    >>> array([[0, 1, 2],
+               [3, 4, 5]])
+    >>>
+    >>> get_all_but_indexed_value(a,index=[0,1])
+    >>> array([[1, 2],
+              [3, 5]])
     '''
+    
+    # Make sure we manipulate numpy arrays
+    a,index=np.array(a),np.array(index)
+    
+    # Sanity checks
+    if a.ndim!=2 or index.ndim!=1:
+        err  = 'This function requires an array \'a\' of dimension 2 (it is currently {})\n'.format(a.ndim)
+        err += 'and an array \'index\' of dimension 1 (it is currently {})'.format(index.ndim)
+        raise NameError(err)
+    if a.shape[0] != index.shape[0]:
+        err  = 'The two array must have the same number of element along the first axis.\n'
+        err += 'while currently \'a\' has {} elements and \'index\' has {}.'.format(a.shape[0],index.shape[0])
+        raise NameError(err)
+    
     N=np.arange(a.shape[0])
     return np.array([np.concatenate([a[i,:index[i]],a[i,index[i]+1:]]) for i in N])
 
