@@ -43,8 +43,11 @@ class sample:
         return sample(s.config,s.dsid_array,s.name,s.latexname,s.color,s.df)
 
     def get_files_list(self):
-        if (os.path.isdir(self.config['path'])): return [self.config['path']+str(ids)+'.root' for ids in self.dsid_array ]
-        else: print('Sample::get_file_list():: ERROR, data directory is not found')
+        if (os.path.isdir(self.config['path'])): 
+            return [self.config['path']+str(ids)+'.root' for ids in self.dsid_array ]
+        else: 
+            err='Sample::get_file_list():: ERROR, data directory {} is not found'.format(self.config['path'])
+            raise NameError(err)
     
     def apply_selection(self,selection):
         copy          = self.__copy__(self)
