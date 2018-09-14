@@ -2,6 +2,16 @@ import numpy as np
 import itertools
 import copy
 
+
+def count_nonnan(a,axis=-1):
+    '''
+    Count the number of elements failing np.isnan() along
+    a given axis.
+    '''
+    if   axis==-1: ntot=a.size
+    else         : ntot=a.shape[axis]
+    return ntot-np.count_nonzero(np.isnan(a),axis=axis)
+
 def replace_nan(a,value=0):
     '''
     Replace all np.nan from a by value (0 by default) and return 
