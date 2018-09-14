@@ -1,15 +1,24 @@
 import numpy as np
 import itertools
+import copy
 
 def replace_nan(a,value=0):
     '''
     Replace all np.nan from a by value (0 by default) and return 
     a copy of the initial array.
     '''
-    import copy
     output=copy.copy(a)
     output[np.isnan(output)]=value
     return output
+
+def replace_val(a,value_old,value_new=0):
+    '''
+    Replace all value_old from a by value_new (0 by default) and return a copy 
+    of the initial array.
+    '''
+    output=copy.copy(a)
+    output[output==value_old]=value_new
+    return output  
 
 def contains_collections(arrays):
     '''
@@ -445,6 +454,7 @@ def df2array(df,variables,**kwargs):
         raise NameError(err)
     Nevt,Nobj=len(df),np.max([len(i) for i in df[variables[0]].values])
     if 'nobj'  in kwargs: Nobj=kwargs['nobj']
+    
     def default_array(str_val):
         try:               
             val=float(str_val)
