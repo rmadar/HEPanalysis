@@ -2,6 +2,13 @@ import numpy as np
 import itertools
 import copy
 
+# TODO
+# ====
+# Parallelize the functions
+#  - square_jagged_2Darray()
+#  - df2array()
+#  - make_all_pairs_nd()
+
 
 def count_nonnan(a,axis=-1):
     '''
