@@ -7,17 +7,20 @@ def getZ0(s,b,berr2=None,mode='complete'):
     Compute significance from using either s/sqrt(b+berr^2) or eq.20 of 
     https://www.pp.rhul.ac.uk/~cowan/stat/medsig/medsigNote.pdf
     
-    Args:
+    Arguments
+    =========
      - b     [np.array]: total background
      - s     [np.array]: signal
      - berr2 [np.array]: integrated luminosity to normalize samples
      - mode  [string]  : 'simple' s/sqrt(b), 
                          'simple_MCstat' (s/sqrt(b+berr^2) 
                          'complete' (eq.20 of the paper)
-    Return z0,nfail: 
+    Return
+    ======
      - z0 [float] var-shaped signifiance
      - nfail [int] number of bins where sig2 is negative or nan
     '''
+    
     if (mode=='simple'):
         err2 = b
         sig2 = s**2/(err2)
@@ -41,31 +44,35 @@ def getZ0(s,b,berr2=None,mode='complete'):
     return np.sqrt(np.sum(sig2)),nfail
     
 
-def computeZ0(bkg,sig,lumi,binning,var='HT',mode='complete'):
+
+
+def computeZ0(bkg,sig,bins,var='HT',mode='complete',wght='w',lumi_scale=1.0):
     '''
     Compute significance as defined in getZ0() from any variable 'var'
-    contained in the dataframes 'bkg' and 'sig', for an arbitrary binning.
+    contained in the dataframes 'bkg' and 'sig', for an arbitrary bins.
     and integrated luminosity.
     
-    Args:
+    Arguments
+    =========
      - bkg [dataframe]: total background
      - sig [dataframe]: signal
-     - lumi [float]: integrated luminosity to normalize samples
-     - binning [array]: final variable binning
+     - lumi_scale [float]: integrated luminosity to normalize samples
+     - bins [array]: final variable bins
      - var [string]: name of the variable to extract the significance
      - mode [string]: 'simple' (s/sqrt(b+berr^2) or 'complete' (eq.20 of the paper)
     
-    Return getZ0(): 
+    Return
+    ======
      - z0 [float] var-shaped signifiance
      - nfail [int] number of bins where sig2 is negative or nan
     '''
 
     bkg_v,sig_v=bkg[var].values,sig[var].values
-    bkg_w,sig_w=bkg['weight_raw'].values,sig['weight_raw'].values
+    bkg_w,sig_w=bkg[wght].values,sig[wght].values
     
-    b,_     = np.histogram(bkg_v, weights=bkg_w*lumi     , bins=binning)
-    s,_     = np.histogram(sig_v, weights=sig_w*lumi     , bins=binning)
-    berr2,_ = np.histogram(bkg_v, weights=(bkg_w*lumi)**2, bins=binning)
+    b,_     = np.histogram(bkg_v, weights=bkg_w*lumi_scale     , bins=bins)
+    s,_     = np.histogram(sig_v, weights=sig_w*lumi_scale     , bins=bins)
+    berr2,_ = np.histogram(bkg_v, weights=(bkg_w*lumi_scale)**2, bins=bins)
     
     return getZ0(s,b,berr2=berr2,mode=mode)
                                                             

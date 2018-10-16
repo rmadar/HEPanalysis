@@ -30,40 +30,48 @@ def compare_distributions(data_proc_array, variables, selection='', myfigsize=(2
     return
 
 
-def plot_roc_curves(Xsig, Xbkg, variables, regressors, selections=''):
+def plot_roc_curves(Xsig, Xbkg, variables, regressors=None, selections=''):
     '''
     Xsig      : [dataframe, 'sig eff label'] object containing signal events
     Xbkg      : [dataframe, 'bkg eff label'] object containing background events
-    variables : array of variable name that will be use to plot ROC curve
-    regressors: array of [reg_method,name] where reg_method is regression and name is its legend name
+    variables : array of [varname,leg_name,weight,linestyle] that will be use to plot ROC curve
+    regressors: array of [reg_method,leg_name,weight,linestyle] where reg_method is regression and name is its legend name
     '''
-    
     from sklearn.metrics import roc_curve
 
     # Prepare the full dataset
     sig_labelled = Xsig[0]
-    sig_labelled['isSig'] = True
+    sig_labelled['isSig']=True
     bkg_labelled = Xbkg[0]
-    bkg_labelled['isSig'] = False
-    X = pd.concat( [sig_labelled,bkg_labelled] )
-    if selections: X = X.query(selections)
-    
+    bkg_labelled['isSig']=False
+    X=pd.concat( [sig_labelled,bkg_labelled] )
+    if selections: X=X.query(selections)
+
+    # Preparing variables object
+    ''' Write something to be able to pass just a sting ## FIX ME'''
+        
     # Produce the plots
     plt.figure(figsize=(10,8))
-    for var in variables:
-        fake,eff,_= roc_curve(X['isSig'],X[var])
-        plt.plot(fake,eff,label=var)
-    
+    for var_block in variables:
+        var,name,w,linestyle=var_block
+        if w: wgt=X[w]
+        else: wgt=None
+        fake,eff,_= roc_curve(X['isSig'],X[var],sample_weight=wgt)
+        plt.plot(fake,eff,label=name,linestyle=linestyle)
+
     Xeval=X.drop('isSig',axis=1)
-    Xeval.head()
-    for reg,name in regressors:
-        fake,eff,_= roc_curve(X['isSig'],reg.predict(Xeval))
-        plt.plot(fake,eff,label=name)
+    if regressors:
+        for reg_block in regressors:
+            reg,name,w,linestyle=reg_block
+            if w: wgt=X[w]
+            else: wgt=None
+            fake,eff,_= roc_curve(X['isSig'],reg.predict(Xeval),sample_weight=wgt)
+            plt.plot(fake,eff,label=name,linestyle=linestyle)
     
     plt.xlabel(Xbkg[1])
     plt.ylabel(Xsig[1])
     plt.legend()
-    return
+    return plt
 
 
 def plot(sample_dict,v,sel='',mode='stack',lumi=80.0):
@@ -75,21 +83,23 @@ def plot(sample_dict,v,sel='',mode='stack',lumi=80.0):
     else    : selected_data = sample_dict
 
     # ordering dictionary
-    from collections import OrderedDict
-    ordered_data = OrderedDict()
-    if ('others' in selected_data.keys()): ordered_data['others'] = selected_data['others']
-    if ('ttW'    in selected_data.keys()): ordered_data['ttW']    = selected_data['ttW']
-    if ('ttZ'    in selected_data.keys()): ordered_data['ttZ']    = selected_data['ttZ']
-    if ('ttH'    in selected_data.keys()): ordered_data['ttH']    = selected_data['ttH']
-    if ('ttbar'  in selected_data.keys()): ordered_data['ttbar']  = selected_data['ttbar']
-    if ('4topSM' in selected_data.keys()): ordered_data['4topSM'] = selected_data['4topSM']
+    #from collections import OrderedDict
+    #ordered_data = OrderedDict()
+    #if ('others' in selected_data.keys()): ordered_data['others'] = selected_data['others']
+    #if ('ttW'    in selected_data.keys()): ordered_data['ttW']    = selected_data['ttW']
+    #if ('ttZ'    in selected_data.keys()): ordered_data['ttZ']    = selected_data['ttZ']
+    #if ('ttH'    in selected_data.keys()): ordered_data['ttH']    = selected_data['ttH']
+    #if ('ttbar'  in selected_data.keys()): ordered_data['ttbar']  = selected_data['ttbar']
+    #if ('4topSM' in selected_data.keys()): ordered_data['4topSM'] = selected_data['4topSM']
+    
+    ordered_data=selected_data
     
     colors  = [d.color                 for d in ordered_data.values()]
     labels  = [d.latexname             for d in ordered_data.values()]
     weights = [d.df['weight_raw']*lumi for d in ordered_data.values()]
     values  = [d.df[v.varname]         for d in ordered_data.values()]
     
-    plt.figure()
+    plt.figure(figsize=(8,7))
 
     if (mode is 'stack'):
         _,barray,_ = plt.hist(values, color=colors, label=labels, \
