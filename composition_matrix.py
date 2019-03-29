@@ -58,11 +58,11 @@ def get_fractions(yields, errors, sum_type):
     
     # Define how to remove the correct element to get n2 (depending on sum type)
     if sum_type == 'x-cats':
-        clean = lambda ar, x, y: np.delete(yields[:, y], x)
+        clean = lambda ar, _ix, _iy: np.delete(ar[:, _iy], _ix)
     elif sum_type == 'y-cats':
-        clean = lambda ar, x, y: np.delete(yields[x, :], y)
+        clean = lambda ar, _ix, _iy: np.delete(ar[_ix, :], _iy)
     elif sum_type == 'all':
-        clean = lambda ar, x, y: np.delete(yields, [x, y])
+        clean = lambda ar, _ix, _iy: np.delete(ar.flatten(), _ix*ar.shape[1]+_iy)
     else:
         err = '{} is not supported, use \'x-cats\', \'y-cats\' or \'all\''.format(sum_type)
         raise NameError(err)
@@ -95,7 +95,8 @@ def get_fractions(yields, errors, sum_type):
 def plot_matrices(yields, errors, SoverB=None, cmap='Blues',
                   xcat_name=None, ycat_name=None,
                   xlabels=None, ylabels=None, added_title=None, grid=True, 
-                  figsize=None, label_size=20, number_size=19, title_size=30):
+                  figsize=None, label_size=20, number_size=19, title_size=30,
+                  number_precision=0):
 
     '''
     Plot three matrices showing the decomposition of 
@@ -125,6 +126,7 @@ def plot_matrices(yields, errors, SoverB=None, cmap='Blues',
     label_size [int]: font size for axis labels
     number_size [int]: font size for numbers
     title_size [int]: font size for title
+    number_precision [int]: number of significant digits to be printed
 
     Return
     ------
@@ -194,7 +196,9 @@ def plot_matrices(yields, errors, SoverB=None, cmap='Blues',
                     text_option['color'] = 'lightgrey'
                 else:
                     text_option['color'] = 'black'
-                val = '{:.0f}$\\,\\pm\\,{:.0f}$'.format(data[i, j], np.sqrt(error[i, j]))
+                prec_str = '.{}f'.format(int(number_precision))
+                val_str = '{{:{}}}$\\,\\pm\\,{{:{}}}$'.format(prec_str, prec_str)
+                val = val_str.format(data[i, j], np.sqrt(error[i, j]))
                 ax.text(i, j, val, **text_option)
 
     # Titles
